@@ -11,15 +11,27 @@ chrome.storage.local.get(['backupProductsEnabled', 'backupPurchaseEnabled'], fun
 });
 
 function getNoticeText(backupProductsEnabled, backupPurchaseEnabled) {
-    let noticeText = '';
-    let enabledFunctions = [];
-    if (backupProductsEnabled) enabledFunctions.push('Products');
-    if (backupPurchaseEnabled) enabledFunctions.push('Proof Of Purchase');
+    let noticeText = 'Backup function is currently enabled for: ';
+    let suggestions = []; // Use an array to gather suggestions based on what's enabled
 
-    // Join the array elements with comma separators
-    let enabledFunctionsText = enabledFunctions.join(', ');
+    if (backupProductsEnabled && backupPurchaseEnabled) {
+        // If both are enabled, provide a general instruction that covers both cases
+        noticeText += "Products and Proof Of Purchase.";
+        suggestions.push('Please head to the "View All Products" page for products backup and the "View All Orders" page for purchase backup.');
+    } else if (backupProductsEnabled) {
+        // If only Products backup is enabled
+        noticeText += "Products. ";
+        suggestions.push('Please head to the "View All Products" page to trigger products backup.');
+    } else if (backupPurchaseEnabled) {
+        // If only Purchases backup is enabled
+        noticeText += "Proof Of Purchase. ";
+        suggestions.push('Please head to the "View All Orders" page to trigger purchases backup.');
+    }
 
-    noticeText = 'Backup function is currently enabled for: ' + enabledFunctionsText + '. Navigate to the relevant pages to trigger.';
+    // Joining suggestions for the case both are enabled or just making it more readable
+    let suggestionText = suggestions.join(' ');
+
+    noticeText += suggestionText;
 
     // Create or update the notice
     createOrUpdateNotice(noticeText);
