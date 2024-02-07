@@ -1,44 +1,62 @@
+// Initialize state when the extension is installed or updated
 chrome.runtime.onInstalled.addListener(() => {
+    chrome.storage.local.set({ backupProductsEnabled: false, backupPurchaseEnabled: false });
+
+    // Create context menu items with correctly formatted titles
     chrome.contextMenus.create({
-        id: "backupProducts",
-        title: "Backup Products",
+        id: "backupProductsEnabled",
+        title: formatTitle("backupProductsEnabled", false),
         contexts: ["all"],
         documentUrlPatterns: ["https://store.x-plane.org/*"]
     });
 
     chrome.contextMenus.create({
-        id: "backupPurchase",
-        title: "Backup Proof Of Purchase",
+        id: "backupPurchaseEnabled",
+        title: formatTitle("backupPurchaseEnabled", false),
         contexts: ["all"],
         documentUrlPatterns: ["https://store.x-plane.org/*"]
     });
 });
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (info.menuItemId === "backupProducts" && tab.url.startsWith("https://store.x-plane.org/")) {
-        // Check if we are on the correct page or need to redirect
-        if (tab.url !== "https://store.x-plane.org/ordertrackingX.asp?sec=pro") {
-            chrome.tabs.update(tab.id, { url: "https://store.x-plane.org/ordertrackingX.asp?sec=pro" });
-        } else {
-            // Inject the content script to extract items and download them
-            chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                files: ['extractItemsAndDownload.js']
+function toggleFunctionality(key) {
+    chrome.storage.local.get([key], function (result) {
+        let currentState = result[key];
+        let newState = !currentState; // Toggle the state
+
+        chrome.storage.local.set({ [key]: newState }, function () {
+            // Now that the state is updated, generate the correct title
+            let formattedTitle = formatTitle(key, newState);
+            chrome.contextMenus.update(key, { title: formattedTitle }, () => {
+                if (chrome.runtime.lastError) {
+                    console.error(`Error updating context menu: ${chrome.runtime.lastError.message}`);
+                } else {
+                    console.log(`Context menu updated: ${formattedTitle}`);
+                }
             });
-        }
-    }
-    if (info.menuItemId === "backupProducts") {
-        if (tab.url === "https://store.x-plane.org/ordertrackingX.asp?sec=pro") {
-            // Invoke the products function here
-        } else {
-            chrome.tabs.update(tab.id, { url: "https://store.x-plane.org/ordertrackingX.asp?sec=pro" });
-        }
-    } else if (info.menuItemId === "backupPurchase") {
-        if (tab.url === "https://store.x-plane.org/ordertrackingX.asp?sec=ord") {
-            // Invoke the purchase function here
-        } else {
-            chrome.tabs.update(tab.id, { url: "https://store.x-plane.org/ordertrackingX.asp?sec=ord" });
-        }
+        });
+    });
+}
+
+function formatTitle(key, isEnabled) {
+    // First, ensure the base feature name is correctly spaced and cased.
+    let featureName = key.replace(/Enabled$/, '') // Remove "Enabled" suffix
+        .replace(/([A-Z])/g, ' $1') // Add spaces before uppercase letters
+        .trim() // Trim any leading/trailing whitespace
+        .toLowerCase(); // Convert to lowercase for consistent processing
+
+    // Split into words, capitalize the first letter of each word
+    featureName = featureName.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+    // Return the formatted title, adding "Disable" or "Enable" prefix as appropriate
+    return `${isEnabled ? "Disable" : "Enable"} ${featureName}`;
+}
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === "backupProductsEnabled" || info.menuItemId === "backupPurchaseEnabled") {
+        const key = info.menuItemId;
+        toggleFunctionality(key);
     }
 });
 
