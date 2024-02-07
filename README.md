@@ -6,7 +6,7 @@ The X-Plane.org Store Backup Utility Chrome Extension is designed to assist cust
 
 ## Features
 
-- **Backup Proof of Purchase**: Users can easily save a PDF or screenshot of their proof of purchase for each transaction.
+- **Backup Proof of Purchase**: Users can easily save a screenshot of their proof of purchase for each transaction.
 - **Backup Product Keys**: Securely save and export product keys associated with each purchase.
 - **Download Product Files**: Automate the download process of available product files, allowing users to back up their purchased software.
 
