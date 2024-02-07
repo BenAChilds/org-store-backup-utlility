@@ -1,0 +1,48 @@
+{
+    "manifest_version": 3,
+    "name": "X-Plane Store Backup",
+    "version": "1.0",
+    "description": "Backup products and proof of purchase from the X-Plane Store.",
+    "permissions": [
+        "downloads",
+        "tabs",
+        "activeTab",
+        "scripting",
+        "contextMenus"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://store.x-plane.org/ordertrackingX.asp?sec=pro"
+            ],
+            "js": [
+                "extractItemsAndDownload.js"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "https://store.x-plane.org/ordertrackingX.asp?sec=ord"
+            ],
+            "js": [
+                "openDetailsAndPrint.js"
+            ],
+            "run_at": "document_end"
+        }
+    ],
+    "host_permissions": [
+        "https://store.x-plane.org/*",
+        "<all_urls>"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "images/favicon.ico",
+            "48": "images/favicon.ico",
+            "128": "images/favicon.ico"
+        }
+    }
+}
