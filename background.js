@@ -43,42 +43,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    if (request.action === "openAndPrint") {
-        chrome.tabs.create({ url: request.url, active: true }, function (tab) {
-            // Wait for the tab to load completely before capturing.
-            chrome.tabs.onUpdated.addListener(function tabUpdateListener(tabId, changeInfo) {
-                if (tabId === tab.id && changeInfo.status === "complete") {
-                    // Remove the listener to avoid multiple captures.
-                    chrome.tabs.onUpdated.removeListener(tabUpdateListener);
-
-                    // Capture the screenshot.
-                    chrome.scripting.executeScript({
-                        target: { tabId: tab.id },
-                        function: scrollToElementAndCapture
-                    }, () => {
-                        // After scrolling, capture the screenshot
-                        setTimeout(() => {
-                            chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" }, (dataUrl) => {
-                                // Process the captured screenshot
-                                const filename = `X-Plane Proof Of Purchase - ${request.invoiceNumber}.png`;
-                                downloadImage(dataUrl, filename);
-
-                                // Optionally, close the tab after capturing
-                                chrome.tabs.remove(tab.id);
-                            });
-                        }, 1000); // Adjust this delay as necessary
-                    });
-
-                    // chrome.tabs.captureVisibleTab(null, { format: "png" }, function (dataUrl) {
-                    //     // Save the screenshot as an image file.
-                    //     const filename = `X-Plane.org Proof Of Purchase - ${request.invoiceNumber}.png`;
-                    //     downloadImage(dataUrl, filename);
-
-                    //     // Optionally, close the tab after capturing.
-                    //     chrome.tabs.remove(tab.id);
-                    // });
-                }
-            });
+    if (request.action === "processLinks") {
+        notifyUserStart(request.links.length);
+        processLinksSequentially(request.links).then(() => {
+            notifyUserEnd();
+        }).catch(error => {
+            console.error("An error occurred during the process:", error);
+            // Optionally notify the user of the error
         });
     }
     if (request.action === "downloadItems") {
@@ -124,30 +95,114 @@ function downloadImage(dataUrl, filename) {
     });
 }
 
-
 function clickDownloadButton() {
-    // Corrected class selector to use dots for class names
-    const buttonSelector = '.btn.btn-default'; // Ensure the selector is correct
-    const buttons = document.querySelectorAll(buttonSelector);
-    buttons.forEach(button => {
-        // Adding a slight delay might help if the page needs time to make buttons interactive
-        setTimeout(() => button.click(), 1000);
+    const buttonSelector = '.btn.btn-default';
+    document.querySelectorAll(buttonSelector).forEach(button => {
+        setTimeout(() => button.click(), 1000); // Adding a delay to ensure the page has loaded
     });
 }
 
 function scrollToElementAndCapture() {
     const targetElement = document.querySelector('.page_header.no-print');
     if (targetElement) {
-        // Scroll the element into view
-        targetElement.scrollIntoView();
-
-        // Wait a bit to ensure the scroll has completed and page is stable.
-        setTimeout(() => {
-            // Send message to background to capture the screenshot
-            chrome.runtime.sendMessage({ action: "captureVisible" });
-        }, 500); // Adjust delay as needed to ensure page has stabilized
-    } else {
-        // Element not found, handle accordingly
-        console.error("Target element for screenshot not found.");
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+}
+
+async function processLinksSequentially(links) {
+    for (const { url, invoiceNumber } of links) {
+        const tab = await openTabAndWaitForLoad(url);
+
+        // Ensure the tab is active before scrolling and capturing
+        await chrome.tabs.update(tab.id, { active: true });
+
+        // Scroll the target element into view
+        await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            function: scrollToElementAndCapture
+        });
+
+        // Wait a bit to ensure the scroll effect is complete and the page is stable
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Capture the screenshot from the now-active and scrolled tab
+        const dataUrl = await captureScreenshot(tab);
+
+        // Download the screenshot
+        if (dataUrl) {
+            const filename = `X-Plane.org Purchase - ${invoiceNumber}.png`;
+            downloadScreenshot(dataUrl, filename);
+        } else {
+            console.error('Failed to capture screenshot for invoice:', invoiceNumber);
+        }
+
+        // Close the tab after capturing and downloading the screenshot
+        chrome.tabs.remove(tab.id);
+    }
+}
+
+
+function openTabAndWaitForLoad(url) {
+    return new Promise((resolve, reject) => {
+        chrome.tabs.create({ url: url, active: false }, tab => {
+            chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
+                if (tabId === tab.id && changeInfo.status === 'complete') {
+                    chrome.tabs.onUpdated.removeListener(listener);
+                    resolve(tab);
+                }
+            });
+        });
+    });
+}
+
+function captureScreenshot(tab) {
+    return new Promise((resolve, reject) => {
+        // Add a slight delay to ensure the tab is ready for capture
+        setTimeout(() => {
+            chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, dataUrl => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(`Failed to capture tab: ${chrome.runtime.lastError.message}`));
+                } else {
+                    resolve(dataUrl);
+                }
+            });
+        }, 500); // Adjust delay as needed
+    });
+}
+
+function downloadScreenshot(dataUrl, filename) {
+    if (!dataUrl) {
+        console.error('No data URL provided for download.');
+        return; // Exit if no data URL is provided
+    }
+
+    chrome.downloads.download({
+        url: dataUrl,
+        filename: filename,
+        saveAs: false // or true, based on your requirements
+    }, downloadId => {
+        if (chrome.runtime.lastError) {
+            console.error(`Download failed: ${chrome.runtime.lastError.message}`);
+        }
+    });
+}
+
+function notifyUserStart(linksLength) {
+    chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'images/icon.png',
+        title: 'Backup Process Started',
+        message: `Starting the backup process for ${linksLength} purchases. Please do not interfere with the browser while this process is running.`,
+        priority: 2
+    });
+}
+
+function notifyUserEnd() {
+    chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'images/icon.png',
+        title: 'Backup Process Complete',
+        message: 'Backup process complete. You may now use your browser again.',
+        priority: 2
+    });
 }

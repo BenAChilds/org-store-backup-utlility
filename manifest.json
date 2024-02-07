@@ -8,7 +8,8 @@
         "tabs",
         "activeTab",
         "scripting",
-        "contextMenus"
+        "contextMenus",
+        "notifications"
     ],
     "background": {
         "service_worker": "background.js"
@@ -40,9 +41,9 @@
     "action": {
         "default_popup": "popup.html",
         "default_icon": {
-            "16": "images/favicon.ico",
-            "48": "images/favicon.ico",
-            "128": "images/favicon.ico"
+            "16": "images/icon.png",
+            "48": "images/icon.png",
+            "128": "images/icon.png"
         }
     }
 }
