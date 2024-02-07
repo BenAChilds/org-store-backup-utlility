@@ -33,6 +33,15 @@
                 "openDetailsAndPrint.js"
             ],
             "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "*://store.x-plane.org/*"
+            ],
+            "js": [
+                "injectNotice.js"
+            ],
+            "run_at": "document_end"
         }
     ],
     "host_permissions": [

@@ -19,19 +19,20 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 function toggleFunctionality(key) {
-    chrome.storage.local.get([key], function (result) {
-        let currentState = result[key];
-        let newState = !currentState; // Toggle the state
+    chrome.storage.local.get(['backupProductsEnabled', 'backupPurchaseEnabled'], function (result) {
+        let newState = !result[key]; // Toggle the current state
+        result[key] = newState; // Update the state for the toggled feature
 
         chrome.storage.local.set({ [key]: newState }, function () {
-            // Now that the state is updated, generate the correct title
+            // Update context menu title based on the new state
             let formattedTitle = formatTitle(key, newState);
-            chrome.contextMenus.update(key, { title: formattedTitle }, () => {
-                if (chrome.runtime.lastError) {
-                    console.error(`Error updating context menu: ${chrome.runtime.lastError.message}`);
-                } else {
-                    console.log(`Context menu updated: ${formattedTitle}`);
-                }
+            chrome.contextMenus.update(key, { title: formattedTitle });
+
+            // Send a message to all tabs to update the notice
+            chrome.tabs.query({ url: "*://store.x-plane.org/*" }, function (tabs) {
+                tabs.forEach(tab => {
+                    chrome.tabs.sendMessage(tab.id, { action: "updateNotice" });
+                });
             });
         });
     });
@@ -61,6 +62,17 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+    if (tab.url && tab.url.includes('store.x-plane.org') && changeInfo.status === 'complete') {
+        chrome.storage.local.get(['backupProductsEnabled', 'backupPurchaseEnabled'], function (result) {
+            if (result.backupProductsEnabled || result.backupPurchaseEnabled) {
+                chrome.scripting.executeScript({
+                    target: { tabId: tabId },
+                    files: ['injectNotice.js']
+                });
+            }
+        });
+    }
+    
     if (request.action === "processLinks") {
         notifyUserStart(request.links.length);
         processLinksSequentially(request.links).then(() => {
