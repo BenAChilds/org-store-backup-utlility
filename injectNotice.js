@@ -43,7 +43,7 @@ function createOrUpdateNotice(text) {
         notice = document.createElement('div');
         notice.id = 'backup-notice';
         notice.style.position = 'fixed';
-        notice.style.bottom = '0';
+        notice.style.top = '0';
         notice.style.left = '0';
         notice.style.width = '100%';
         notice.style.backgroundColor = '#feb204';

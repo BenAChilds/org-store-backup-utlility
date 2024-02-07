@@ -2,12 +2,10 @@
     chrome.storage.local.get(['backupProductsEnabled'], function (result) {
         if (result.backupProductsEnabled) {
             const downloadLinks = document.querySelectorAll('.trackOrders_details .col-lg-2.col-sm-2.text-right a');
-            const limitedDownloadLinks = Array.from(downloadLinks).slice(0, 4); // Limit for development purposes
 
             let invoiceLinks = {};
 
-            // TODO: Change to downloadLinks for prod
-            limitedDownloadLinks.forEach(link => {
+            downloadLinks.forEach(link => {
                 const invoiceNumber = link.closest('.trackOrders_details').querySelector('.col-lg-3.col-sm-3').textContent.trim();
                 if (!invoiceLinks.hasOwnProperty(invoiceNumber)) {
                     invoiceLinks[invoiceNumber] = link.href;

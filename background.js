@@ -62,11 +62,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    if (tab.url && tab.url.includes('store.x-plane.org') && changeInfo.status === 'complete') {
+    // Ensure sender.tab is defined and has a URL property
+    if (sender.tab && sender.tab.url && sender.tab.url.includes('store.x-plane.org')) {
         chrome.storage.local.get(['backupProductsEnabled', 'backupPurchaseEnabled'], function (result) {
             if (result.backupProductsEnabled || result.backupPurchaseEnabled) {
+                // Execute the script on the sender's tab
                 chrome.scripting.executeScript({
-                    target: { tabId: tabId },
+                    target: { tabId: sender.tab.id },
                     files: ['injectNotice.js']
                 });
             }
