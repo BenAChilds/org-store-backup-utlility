@@ -211,7 +211,7 @@ function downloadScreenshot(dataUrl, filename) {
     chrome.downloads.download({
         url: dataUrl,
         filename: filename,
-        saveAs: false // or true, based on your requirements
+        saveAs: false
     }, downloadId => {
         if (chrome.runtime.lastError) {
             console.error(`Download failed: ${chrome.runtime.lastError.message}`);

@@ -1,4 +1,3 @@
-// injectNotice.js
 chrome.storage.local.get(['backupProductsEnabled', 'backupPurchaseEnabled'], function (result) {
     const { backupProductsEnabled, backupPurchaseEnabled } = result;
 
